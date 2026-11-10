@@ -27,7 +27,7 @@
 // #bpm-coins #bpm-progress #bpm-swim. Все тексты — Lang (ключи ui.* ниже); реклама только «За рекламу N/M» (Eco.watchAd).
 
 Object.assign(LANG_STRINGS.ru, {
-    'menu.tagline': 'Не шуми — он слышит',
+    'menu.tagline': 'Не шуми — он слышит', 'menu.deep': 'Глубокий край', 'menu.nosplash': 'Не плескаться', 'menu.ropeLabel': 'Дорожки закрыты для монстров',
     'menu.play': 'Играть', 'menu.level': 'Уровень {n} · {name}', 'menu.lobby': 'Лобби', 'menu.howto': 'Как играть',
     'menu.shop': 'Магазин', 'menu.equipment': 'Снаряжение', 'menu.upgrades': 'Улучшения', 'menu.skins': 'Скины', 'menu.inventory': 'Инвентарь',
     'ui.close': 'Закрыть', 'ui.sound': 'Звук', 'ui.soundOn': 'Звук: вкл', 'ui.soundOff': 'Звук: выкл', 'ui.pause': 'Пауза',
@@ -77,7 +77,7 @@ Object.assign(LANG_STRINGS.ru, {
     'key.space': 'Пробел',
 });
 Object.assign(LANG_STRINGS.en, {
-    'menu.tagline': 'Don\'t make a sound — it hears you',
+    'menu.tagline': 'Don\'t make a sound — it hears you', 'menu.deep': 'Deep end', 'menu.nosplash': 'No splashing', 'menu.ropeLabel': 'Lanes closed to monsters',
     'menu.play': 'Play', 'menu.level': 'Level {n} · {name}', 'menu.lobby': 'Lobby', 'menu.howto': 'How to play',
     'menu.shop': 'Shop', 'menu.equipment': 'Gear', 'menu.upgrades': 'Upgrades', 'menu.skins': 'Skins', 'menu.inventory': 'Backpack',
     'ui.close': 'Close', 'ui.sound': 'Sound', 'ui.soundOn': 'Sound: on', 'ui.soundOff': 'Sound: off', 'ui.pause': 'Pause',
@@ -310,32 +310,50 @@ const GameUI = {
             '<div id="bpm-chat" class="bpm-hudb" aria-live="polite"></div>';
     },
 
+    /** Буквы названия — плитки мозаики на стене бассейна (по плитке на букву, пробел — просвет). */
+    _tiles(word, line) {
+        let k = 0, out = '';
+        for (const ch of Array.from(word)) {
+            if (ch === ' ') { out += '<i class="sp"></i>'; continue; }
+            const ap = ch === '\u2019' || ch === '\'';
+            out += '<i class="t ' + (ap ? 'ap' : 'c' + ((k + line) % 3)) + '" style="--d:' + (0.05 * (k + line * 5)).toFixed(2) + 's">' + this.esc(ch) + '</i>';
+            if (!ap) k++;
+        }
+        return out;
+    },
+
     _menuHTML() {
         const words = String(typeof GAME_TITLE !== 'undefined' ? GAME_TITLE : 'Don\u2019t Splash').split(':')[0].trim().split(' ');   // логотип — название до двоеточия
         const l2 = words.pop() || '', l1 = words.join(' ');
-        let bubbles = '';
-        for (let i = 0; i < 9; i++) bubbles += '<i style="left:' + (6 + i * 11) + '%;animation-delay:' + (i * 1.1).toFixed(1) + 's;animation-duration:' + (7 + (i % 4) * 2) + 's;width:' + (9 + (i % 3) * 5) + 'px;height:' + (9 + (i % 3) * 5) + 'px"></i>';
-        const quick = ['shop', 'equipment', 'upgrades', 'skins', 'inventory', 'daily', 'wheel', 'records'].map((w) =>
-            '<button type="button" class="bpm-qbtn' + (w === 'daily' || w === 'wheel' ? ' hot' : '') + '" data-act="open" data-win="' + w + '"' + (w === 'records' && !this.s.hasBoard ? ' hidden' : '') + '>' +
-            this.ico(w) + '<span>' + this.esc(this.t('menu.' + w)) + '</span>' + (w === 'daily' || w === 'wheel' ? '<b class="bdg" hidden></b>' : '') + '</button>').join('');
+        const rope = Array.from({ length: 22 }, (_, i) => '<i style="--i:' + i + '"></i>').join('');
+        const quick = ['shop', 'equipment', 'upgrades', 'skins', 'inventory', 'daily', 'wheel', 'records'].map((w, i) =>
+            '<button type="button" class="bpm-qbtn' + (w === 'daily' || w === 'wheel' ? ' hot' : '') + '" data-act="open" data-win="' + w + '" style="--i:' + i + '"' + (w === 'records' && !this.s.hasBoard ? ' hidden' : '') + '>' +
+            '<span class="hole"></span><span class="no">' + String(i + 3).padStart(2, '0') + '</span>' + this.ico(w) + '<span class="lb">' + this.esc(this.t('menu.' + w)) + '</span>' +
+            (w === 'daily' || w === 'wheel' ? '<b class="bdg" hidden></b>' : '') + '</button>').join('');
         return '' +
-            '<div class="bpm-menu-bg"></div><div class="bpm-bubbles">' + bubbles + '</div>' +
+            '<div class="bpm-menu-bg"></div><div class="bpm-caustics"><i></i><i></i></div><div class="bpm-steam"><i></i><i></i><i></i></div>' +
             '<div class="bpm-menu-top"><div class="bpm-menu-l"><button type="button" class="bpm-round bpm-snd" data-act="sound" aria-label="' + this.esc(this.t('ui.sound')) + '"></button>' +
             '<button type="button" class="bpm-round bpm-howto-r" data-act="howto" aria-label="' + this.esc(this.t('menu.howto')) + '">' + this.ico('howto') + '</button></div>' +
             '<div class="bpm-coinpill" id="bpm-menucoins">' + this.ico('coin') + '<span>0</span></div></div>' +
             '<div class="bpm-menu-in">' +
-            '<div class="bpm-logo"><div class="l1 bpm-stroke">' + this.esc(l1) + '</div><div class="l2 bpm-stroke">' + this.esc(l2) + '</div><span class="wave"></span></div>' +
-            '<p class="bpm-tag bpm-soft">' + this.esc(this.t('menu.tagline')) + '</p>' +
+            '<div class="bpm-brand"><div class="bpm-logo" aria-label="' + this.esc(l1 + ' ' + l2) + '">' +
+            '<div class="row l1" style="--n:' + Math.max(2, Array.from(l1).length) + '">' + this._tiles(l1, 0) + '</div>' +
+            '<div class="row l2" style="--n:' + Math.max(2, Array.from(l2).length) + '">' + this._tiles(l2, 1) + '</div></div>' +
+            '<div class="bpm-nosplash" aria-hidden="true"><i class="screw a"></i><i class="screw b"></i>' + this.ico('nosplash') + '<span>' + this.esc(this.t('menu.nosplash')) + '</span></div>' +
+            '<p class="bpm-tag">' + this.esc(this.t('menu.tagline')) + '</p></div>' +
             '<div class="bpm-menu-btns">' +
-            '<button type="button" class="bpm-btn big" data-act="play" id="bpm-playbtn"><span class="col"><span>' + this.esc(this.t('menu.play')) + '</span><span class="sub" id="bpm-playsub"></span></span></button>' +
-            '<button type="button" class="bpm-btn teal" data-act="lobby">' + this.ico('lobby') + '<span>' + this.esc(this.t('menu.lobby')) + '</span></button>' +
+            '<div class="bpm-lanes">' +
+            '<button type="button" class="bpm-lane main" data-act="play" id="bpm-playbtn"><span class="no">01</span><span class="strip"><span class="lb">' + this.esc(this.t('menu.play')) + '</span><span class="sub" id="bpm-playsub"></span></span>' +
+            '<span class="deep"><span>' + this.esc(this.t('menu.deep')) + '</span></span></button>' +
+            '<button type="button" class="bpm-lane" data-act="lobby"><span class="no">02</span><span class="strip"><span class="lb">' + this.esc(this.t('menu.lobby')) + '</span></span>' + this.ico('lobby') + '</button></div>' +
+            '<div class="bpm-rope" role="presentation">' + rope + '</div>' +
             '<div class="bpm-quick">' + quick + '</div>' +
-            '<button type="button" class="bpm-btn ghost small bpm-howto-w" data-act="howto">' + this.ico('howto') + '<span>' + this.esc(this.t('menu.howto')) + '</span></button>' +
+            '<button type="button" class="bpm-link bpm-howto-w" data-act="howto">' + this.ico('howto') + '<span>' + this.esc(this.t('menu.howto')) + '</span></button>' +
             '</div></div>';
     },
 
     _pauseHTML() {
-        return '<div class="bpm-dialog"><h1 class="bpm-stroke">' + this.esc(this.t('pause.title')) + '</h1><div class="btns">' +
+        return '<div class="bpm-dialog bpm-pausesign"><i class="chain l"></i><i class="chain r"></i><h1>' + this.esc(this.t('pause.title')) + '</h1><div class="btns">' +
             '<button type="button" class="bpm-btn big" data-act="resume">' + this.ico('play') + '<span>' + this.esc(this.t('pause.resume')) + '</span></button>' +
             '<div class="btns row"><button type="button" class="bpm-btn teal small" data-act="howto">' + this.ico('howto') + '<span>' + this.esc(this.t('menu.howto')) + '</span></button>' +
             '<button type="button" class="bpm-btn teal small bpm-snd" data-act="sound" aria-label="' + this.esc(this.t('ui.sound')) + '"></button></div>' +
@@ -438,9 +456,9 @@ const GameUI = {
             case 'result-lobby': if (h.onLobby) h.onLobby(); break;
             case 'double': this._double(b); break;
             case 'ad': this._watch(d.offer || ''); break;
-            case 'tab': this.s.shopTab = d.tab || 'coins'; this._renderWin(); this._scrollTop(); break;
+            case 'tab': this.s.shopTab = d.tab || 'coins'; this._renderWin(); this._scrollTop(); this._flip(); break;
             // косметика
-            case 'cos-tab': this.s.cosTab = GameData.COSMETIC_TABS.includes(d.tab) ? d.tab : 'outfit'; this._previewSkin(this._cosSelected(this.s.cosTab).id); this._renderWin(); this._scrollTop(); break;
+            case 'cos-tab': this.s.cosTab = GameData.COSMETIC_TABS.includes(d.tab) ? d.tab : 'outfit'; this._previewSkin(this._cosSelected(this.s.cosTab).id); this._renderWin(); this._scrollTop(); this._flip(); break;
             case 'cos-sel': this._selectItem(d.id || ''); break;
             case 'cos-buy': this._buy(Eco.buyItem(d.id || ''), () => { this._equipItem(d.id || ''); return this.t('toast.bought', { what: GameData.itemName(d.id || '') }); }); break;
             case 'cos-equip': this._equipItem(d.id || ''); break;
@@ -465,6 +483,32 @@ const GameUI = {
             case 'start': this._start(); break;
             default: break;
         }
+    },
+
+    /** Переворот таблички при смене вкладки: заново проигрывается анимация тела окна и выбранного флажка. */
+    _flip() {
+        for (const el of [this.$('#bpm-win .bpm-body'), this.$('#bpm-win .bpm-tab.on')]) {
+            if (!el) continue;
+            el.classList.remove('flip'); void el.offsetWidth; el.classList.add('flip');
+        }
+    },
+
+    /** Уходящее окно: копия панели уезжает вверх и гаснет (само окно закрывается сразу, игра не ждёт). */
+    _ghost() {
+        try {
+            if (typeof window === 'undefined' || typeof window.matchMedia !== 'function' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            const p = this.$('#bpm-win .bpm-panel');
+            if (!p || !p.firstChild) return;
+            const r = p.getBoundingClientRect();
+            const g = /** @type {HTMLElement} */ (p.cloneNode(true));
+            g.className = 'bpm-panel bpm-ghost';
+            g.style.cssText = 'position:fixed;left:' + r.left + 'px;top:' + r.top + 'px;width:' + r.width + 'px;height:' + r.height + 'px;max-height:none';
+            const layer = document.createElement('div');
+            layer.className = 'bpm-layer bpm-ghostlayer';
+            layer.appendChild(g);
+            document.body.appendChild(layer);
+            setTimeout(() => layer.remove(), 260);
+        } catch (e) { /* без анимации ухода */ }
     },
 
     _scrollTop() { const b = this.$('#bpm-win .bpm-body'); if (b) b.scrollTop = 0; },
@@ -782,7 +826,7 @@ const GameUI = {
         const d = o || {};
         let st = this.s.down;
         if (!st) {
-            el.innerHTML = '<div class="bpm-dialog danger"><h1 class="bpm-stroke shake">' + this.esc(this.t('down.title')) + '</h1>' +
+            el.innerHTML = '<div class="bpm-dialog danger"><div class="bpm-warn">' + this.ico('monster') + '</div><h1 class="shake">' + this.esc(this.t('down.title')) + '</h1>' +
                 '<p class="sub">' + this.esc(this.t('down.sub')) + '</p><div class="bpm-timer"><i></i><span></span></div><div class="btns">' +
                 '<button type="button" class="bpm-btn rescue big" data-act="rescue-item" id="bpm-dn-item">' + this.ico('rescue') + '<span id="bpm-dn-itemtx"></span></button>' +
                 (Eco.adSupported() ? '<button type="button" class="bpm-btn ad bpm-ad" data-act="rescue-ad" id="bpm-dn-ad" data-label="' + this.esc(this.t('ad.rescue')) + '">' + this.ico('ad') + '<span class="lbl">' + this.esc(this.t('ad.rescue')) + '</span></button>' : '') +
@@ -838,8 +882,8 @@ const GameUI = {
         let st = '';
         for (let i = 0; i < 3; i++) st += this.ico('star', i < stars ? '' : 'dim');
         const canDouble = !r.doubled && !!this.h.onDouble && Eco.adSupported() && all > 0;
-        this.el.result.innerHTML = '<div class="bpm-dialog"><div class="bpm-stars">' + st + '</div>' +
-            '<h1 class="bpm-stroke">' + this.esc(this.t('result.title')) + '</h1>' +
+        this.el.result.innerHTML = '<div class="bpm-dialog bpm-cert"><div class="bpm-stars">' + st + '</div>' +
+            '<h1 class="bpm-stamp">' + this.esc(this.t('result.title')) + '</h1>' +
             (r.level ? '<p class="sub">' + this.esc(this.t('menu.level', { n: r.level, name: r.name || GameData.levelName(r.level) })) + '</p>' : '') +
             '<div class="bpm-stats">' +
             '<div class="bpm-stat">' + this.ico('clock') + '<span>' + this.esc(this.t('result.time')) + '</span><b>' + this._fmtTime(r.time) + '</b></div>' +
@@ -912,6 +956,7 @@ const GameUI = {
     closeWindows() {
         if (!this.win) return;
         const was = this.win;
+        this._ghost();
         this.win = '';
         this.el.win.classList.remove('on', 'pop');
         document.body.classList.remove('bpm-win-open');
@@ -933,7 +978,7 @@ const GameUI = {
             upgrades: () => this._winUpgrades(), skins: () => this._winSkins(), inventory: () => this._winInventory(),
             daily: () => this._winDaily(), wheel: () => this._winWheel(), records: () => this._winRecords(),
         }[id]();
-        panel.innerHTML = '<header class="bpm-head"><h2 class="bpm-title bpm-stroke">' + this.ico(icon) + '<span>' + this.esc(this.t('win.' + id)) + '</span></h2>' +
+        panel.innerHTML = '<i class="tape l"></i><i class="tape r"></i><header class="bpm-head"><h2 class="bpm-title">' + this.ico(icon) + '<span>' + this.esc(this.t('win.' + id)) + '</span></h2>' +
             '<div class="bpm-coinpill" id="bpm-wincoins">' + this.ico('coin') + '<span>' + this.num(Eco.coins) + '</span></div>' +
             '<button type="button" class="bpm-round red bpm-x" data-act="close" aria-label="' + this.esc(this.t('ui.close')) + '">' + this.ico('close') + '</button></header>' +
             (id === 'shop' ? this._shopTabs() : id === 'skins' ? this._cosTabs() : '') +
@@ -941,7 +986,11 @@ const GameUI = {
         const nb = this.$('.bpm-body', panel);
         if (nb) nb.scrollTop = keep;
         const nt = this.$('.bpm-tabs', panel);
-        if (nt) nt.scrollLeft = keepX;
+        if (nt) {
+            nt.scrollLeft = keepX;
+            const on = this.$('.bpm-tab.on', nt);   // выбранный флажок всегда на виду
+            if (on && (on.offsetLeft < nt.scrollLeft || on.offsetLeft + on.offsetWidth > nt.scrollLeft + nt.clientWidth)) nt.scrollLeft = Math.max(0, on.offsetLeft - 24);
+        }
         this.s.sig = this._sysSig();
         this.refreshAds();
         if (id === 'wheel') this._wheelKick();
@@ -1271,10 +1320,10 @@ const GameUI = {
             b.className = 'bdg' + (cls ? ' ' + cls : '');
             if (on && b.textContent !== text) b.textContent = text;
         };
-        if (typeof DailyGift !== 'undefined') set('daily', DailyGift.canClaim(), '!', '');
+        if (typeof DailyGift !== 'undefined') set('daily', DailyGift.canClaim(), '', '');
         if (typeof Wheel !== 'undefined') {
             const st = Wheel.status();
-            if (st.freeAvailable && !st.pending) set('wheel', true, '!', '');
+            if (st.freeAvailable && !st.pending) set('wheel', true, '', '');
             else { const m = Math.ceil(st.nextFreeMs / 60000); set('wheel', !st.pending && m > 0, Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0'), 't'); }
         }
     },
@@ -1387,11 +1436,11 @@ const GameUI = {
     _wheelSVG(secs, win) {
         const n = secs.length, step = 360 / n, R = 96;
         const pt = (deg, r) => { const a = deg * Math.PI / 180; return (Math.sin(a) * r).toFixed(2) + ' ' + (-Math.cos(a) * r).toFixed(2); };
-        let w = '<circle r="99" fill="#0b3d47"/>';
+        let w = '<circle r="99" fill="#1f3a4f"/>';
         secs.forEach((sc, i) => {
             const kind = sc.kind === 'item' ? (GameData.supply(sc.itemId) ? 'sup' : 'cos') : 'coin';
-            const fill = { coin: ['#ffd23f', '#ffe486'], sup: ['#5fd9d1', '#8fe8e0'], cos: ['#b08cff', '#c7a8ff'] }[kind][i % 2];
-            w += '<path d="M0 0L' + pt((i - 0.5) * step, R) + 'A' + R + ' ' + R + ' 0 0 1 ' + pt((i + 0.5) * step, R) + 'Z" fill="' + fill + '" stroke="#fff" stroke-width="1.8"' + (win === i ? ' class="win"' : '') + '/>';
+            const fill = { coin: ['#c9a227', '#dcc15a'], sup: ['#2a9d8f', '#5fbeb2'], cos: ['#d64933', '#e57a67'] }[kind][i % 2];
+            w += '<path d="M0 0L' + pt((i - 0.5) * step, R) + 'A' + R + ' ' + R + ' 0 0 1 ' + pt((i + 0.5) * step, R) + 'Z" fill="' + fill + '" stroke="#f3ead5" stroke-width="1.8"' + (win === i ? ' class="win"' : '') + '/>';
         });
         secs.forEach((sc, i) => {
             const ic = this._sectorIcon(sc);
@@ -1399,8 +1448,8 @@ const GameUI = {
             const art = src ? '<image href="' + src + '" x="-15" y="-88" width="30" height="30"/>' : '<svg x="-15" y="-88" width="30" height="30" viewBox="0 0 64 64">' + (GameData.ICONS[ic.icon] || '') + '</svg>';
             w += '<g transform="rotate(' + (i * step).toFixed(2) + ')">' + art + (ic.text ? '<text y="-50" text-anchor="middle">' + this.esc(ic.text) + '</text>' : '') + '</g>';
         });
-        for (let i = 0; i < 20; i++) w += '<circle cx="' + pt(i * 18, 97.5).split(' ')[0] + '" cy="' + pt(i * 18, 97.5).split(' ')[1] + '" r="1.7" fill="#fff" opacity=".9"/>';
-        w += '<circle r="15" fill="#fff" stroke="#0b3d47" stroke-width="3"/><circle r="7" fill="#ffc928" stroke="#0b3d47" stroke-width="2.5"/>';
+        for (let i = 0; i < 20; i++) w += '<circle cx="' + pt(i * 18, 97.5).split(' ')[0] + '" cy="' + pt(i * 18, 97.5).split(' ')[1] + '" r="1.7" fill="#f3ead5" opacity=".9"/>';
+        w += '<circle r="15" fill="#f3ead5" stroke="#1f3a4f" stroke-width="3"/><circle r="6" fill="#c9a227" stroke="#1f3a4f" stroke-width="2.5"/>';
         return '<svg viewBox="-100 -100 200 200" aria-hidden="true">' + w + '</svg>';
     },
 

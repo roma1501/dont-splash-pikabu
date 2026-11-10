@@ -640,133 +640,78 @@ const GameData = {
         return '<svg class="' + c + '" viewBox="0 0 64 64" aria-hidden="true" focusable="false">' + body + '</svg>';
     },
 
-    /** Встроенные SVG (содержимое, viewBox 0 0 64 64): контур чернильный, заливки в палитре «бассейна». */
+    /**
+     * Пиктограммы «табличек бассейна» (viewBox 0 0 64 64): один цвет (currentColor), монолиния 4.5 (= 1.7 px на 24 px),
+     * круглые концы, без заливок, кроме мелких акцентов (класс f). Цвет задаёт CSS (color), поэтому иконка
+     * сама становится «чернильной» на эмали, белой на тёмной плашке и т. п.
+     */
     ICONS: (() => {
-        const k = '#0b3d47';
-        const s = (w) => 'stroke="' + k + '" stroke-width="' + (w || 3) + '" stroke-linejoin="round" stroke-linecap="round"';
-        const line = (c, w) => 'fill="none" stroke="' + c + '" stroke-width="' + w + '" stroke-linecap="round" stroke-linejoin="round"';
-        // Ладонь: общий контур (толстая тёмная обводка по объединению форм), поверх — заливка и подробности
-        const palmShapes = [[15.5, 14], [22.8, 9], [30.1, 12], [37.4, 19]].map((f) => '<rect x="' + f[0] + '" y="' + f[1] + '" width="6.6" height="' + (40 - f[1]) + '" rx="3.3"/>').join('') +
-            '<rect x="14" y="30" width="31" height="26" rx="10"/><rect x="39.5" y="26" width="7.4" height="26" rx="3.7" transform="rotate(46 43 46)"/>';
-        const palm = (fill, shade) => '<g fill="none" stroke="' + k + '" stroke-width="6.5" stroke-linejoin="round">' + palmShapes + '</g><g fill="' + fill + '">' + palmShapes + '</g>' +
-            '<path d="M22.1 22v14M29.4 17v19M36.7 24v12M20 44q0 6 6 8" fill="none" stroke="' + shade + '" stroke-width="1.8" stroke-linecap="round"/>';
-        const whoosh = '<path d="M3 20h8M1 31h10M4 42h7" ' + line(k, 7.5) + '/><path d="M3 20h8M1 31h10M4 42h7" ' + line('#2fc4cf', 3.5) + '/>';
-        const gl = (name, x, y, sc, c) => '<g transform="translate(' + x + ' ' + y + ') scale(' + sc + ')" color="' + c + '">' + GD_GLYPHS[name] + '</g>';
-        const wheelWedges = (() => {
-            const cols = ['#ffd23f', '#ff6f91', '#4fc3f7', '#46d977'];
-            let w = '';
-            for (let i = 0; i < 8; i++) {
-                const a0 = (i / 8) * 2 * Math.PI - Math.PI / 2, a1 = ((i + 1) / 8) * 2 * Math.PI - Math.PI / 2, r = 24;
-                w += '<path d="M32 34L' + (32 + r * Math.cos(a0)).toFixed(1) + ' ' + (34 + r * Math.sin(a0)).toFixed(1) + 'A' + r + ' ' + r + ' 0 0 1 ' + (32 + r * Math.cos(a1)).toFixed(1) + ' ' + (34 + r * Math.sin(a1)).toFixed(1) + 'z" fill="' + cols[i % 4] + '"/>';
-            }
-            return w;
-        })();
-        const coin = (x, y, r) => '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="#ffd23f" ' + s(3) + '/><circle cx="' + x + '" cy="' + y + '" r="' + (r * 0.6) + '" fill="none" stroke="#d98f00" stroke-width="2.4"/>';
-        return {
-            coin: '<circle cx="32" cy="32" r="25" fill="#ffd23f" ' + s(3.5) + '/><circle cx="32" cy="32" r="17" fill="#ffc021" stroke="#d98f00" stroke-width="2.5"/>' +
-                '<path d="M23 34q4.5-7 9 0t9 0" ' + line('#b97500', 3.2) + '/><path d="M16 24a19 19 0 0 1 9-9" ' + line('#fff', 3.2) + ' opacity=".85"/>',
-            coinpile: coin(21, 40, 15) + coin(43, 41, 14) + coin(32, 22, 15),
-            pebble: '<path d="M8 40c0-11 10-19 24-19 15 0 24 8 24 19 0 10-10 15-24 15S8 50 8 40z" fill="#c7d0d5" ' + s(3.5) + '/>' +
-                '<path d="M16 37c3-7 10-11 18-11" ' + line('#fff', 3.5) + ' opacity=".85"/><path d="M18 47c8 4 20 4 30-1" ' + line('#9aa8b0', 3) + '/>' +
-                '<path d="M4 59q6-4 12 0t12 0 12 0 12 0 12 0" ' + line('#2fc4cf', 3) + '/>',
-            bottle: '<rect x="26" y="4" width="12" height="9" rx="2.5" fill="#d9a15a" ' + s(3) + '/>' +
-                '<path d="M27 13h10v9c0 4 9 6 9 15v15a6 6 0 0 1-6 6H24a6 6 0 0 1-6-6V37c0-9 9-11 9-15z" fill="#8fe8e0" ' + s(3.5) + '/>' +
-                '<rect x="25" y="33" width="14" height="15" rx="2" fill="#fff6dc" stroke="' + k + '" stroke-width="2.5"/><path d="M28 39h8M28 43h6" ' + line('#c98a4b', 2) + '/>' +
-                '<path d="M22 31v19" ' + line('#fff', 3) + ' opacity=".85"/>',
-            toy: '<ellipse cx="29" cy="43" rx="22" ry="14" fill="#ffd23f" ' + s(3.5) + '/><circle cx="43" cy="22" r="12" fill="#ffd23f" ' + s(3.5) + '/>' +
-                '<path d="M53 20l9 3-9 5z" fill="#ff8a1f" ' + s(2.5) + '/><circle cx="45" cy="19" r="2.4" fill="' + k + '"/>' +
-                '<path d="M15 41c5 6 14 6 20 0" ' + line('#e0a800', 3) + '/><path d="M8 38l-3-8" ' + s(3) + '/><circle cx="4.5" cy="25" r="4.5" fill="none" stroke="#8a98a0" stroke-width="3"/>',
-            flare: '<path d="M32 2c7 9 11 14 6 22-3 4-10 4-12 0-4-7 0-11 6-22z" fill="#ffae2b" ' + s(3) + '/>' +
-                '<path d="M32 12c4 6 5 8 2.5 12s-6 1.5-6-1.5 1.5-5.500 3.500-10.500z" fill="#fff3a6"/>' +
-                '<rect x="24" y="26" width="16" height="34" rx="4" fill="#e5383b" ' + s(3.5) + '/><rect x="24" y="37" width="16" height="7" fill="#fff" stroke="' + k + '" stroke-width="2"/>' +
-                '<path d="M11 18l-5-3M53 17l5-3M9 29l-6 0M55 29l6 0" ' + line('#ffb02e', 3) + '/>',
-            rope: '<circle cx="29" cy="36" r="19" fill="none" stroke="' + k + '" stroke-width="13"/><circle cx="29" cy="36" r="19" fill="none" stroke="#ead29a" stroke-width="8"/>' +
-                '<circle cx="29" cy="36" r="19" fill="none" stroke="#b9873f" stroke-width="8" stroke-dasharray="3.4 6.1"/>' +
-                '<path d="M45 20c5-5 9-9 14-12" ' + line(k, 9) + '/><path d="M45 20c5-5 9-9 14-12" ' + line('#ead29a', 5) + '/>',
-            push: whoosh + palm('#ffd9ad', '#e0a27a'),
-            superpush: '<path d="M46 3l3.5 7 8-2.5-2.5 8 7 3.5-7.5 4.5 4 7.5-8-.5-1 8-6-5.5-6 5.5-1-8-8 .5 4-7.5-7.5-4.5 7-3.5-2.5-8 8 2.5z" fill="#ffd23f" ' + s(2.5) + ' transform="translate(-6 -4) scale(1.05)"/>' +
-                '<g transform="translate(0 4) scale(.94)">' + whoosh + palm('#ff9a85', '#d9644d') + '</g>',
-            daily: '<rect x="8" y="12" width="48" height="46" rx="9" fill="#fffaf0" ' + s(3.5) + '/><path d="M8 28v-7a9 9 0 0 1 9-9h30a9 9 0 0 1 9 9v7z" fill="#e5383b" ' + s(3.5) + '/>' +
-                '<path d="M21 5v14M43 5v14" ' + line(k, 8) + '/><path d="M21 5v14M43 5v14" ' + line('#fff', 3.5) + '/>' +
-                '<path d="M32 33l3.6 7.4 8 .9-6 5.4 1.7 8L32 50.6l-7.3 4.1 1.7-8-6-5.4 8-.9z" fill="#ffd23f" ' + s(2.5) + '/>',
-            wheel: '<circle cx="32" cy="34" r="28" fill="' + k + '"/>' + wheelWedges + '<circle cx="32" cy="34" r="24" fill="none" stroke="#fff" stroke-width="2.5"/>' +
-                '<circle cx="32" cy="34" r="6.5" fill="#fff" ' + s(3) + '/><path d="M32 2l-7 12h14z" fill="#e5383b" ' + s(3) + '/>',
-            records: '<path d="M20 8h24v15a12 12 0 0 1-24 0z" fill="#ffd23f" ' + s(3.5) + '/><path d="M20 12h-7q-2 11 8 14M44 12h7q2 11-8 14" ' + line(k, 6) + '/><path d="M20 12h-7q-2 11 8 14M44 12h7q2 11-8 14" ' + line('#ffc233', 2.5) + '/>' +
-                '<path d="M32 35v10" ' + line(k, 8) + '/><path d="M32 35v10" ' + line('#ffc233', 4) + '/><rect x="21" y="45" width="22" height="10" rx="3.5" fill="#e89a00" ' + s(3.5) + '/>' +
-                '<path d="M32 13l2.4 5 5.4.6-4 3.7 1.1 5.3-4.9-2.7-4.9 2.7 1.1-5.3-4-3.7 5.400-.6z" fill="#fff" opacity=".9"/>',
-            hair: '<rect x="17" y="22" width="30" height="32" rx="13" fill="#ffd9ad" ' + s(3.5) + '/><path d="M13 36C10 14 22 5 32 5s22 9 19 31c-3-8-5-12-7-14-6 4-18 4-24 0-2 2-4 6-7 14z" fill="#8a4a2b" ' + s(3.5) + '/>' +
-                '<circle cx="26" cy="38" r="2.4" fill="' + k + '"/><circle cx="38" cy="38" r="2.4" fill="' + k + '"/><path d="M19 12q4-4 8-4" ' + line('#c98a5d', 3) + '/>',
-            hat: '<path d="M10 40c0-15 9-24 22-24s22 9 22 24z" fill="#4fc3f7" ' + s(3.5) + '/><path d="M14 40h40c6 0 8 4 8 6s-2 3-6 3H14z" fill="#2c86e0" ' + s(3.5) + '/><circle cx="32" cy="14" r="4" fill="#fff" ' + s(3) + '/>' +
-                '<path d="M20 26q4-5 10-5" ' + line('#fff', 3.5) + ' opacity=".7"/>',
-            acc: '<path d="M2 32h60" ' + line(k, 9) + '/><path d="M2 32h60" ' + line('#2b2f3a', 5) + '/><circle cx="19" cy="32" r="14" fill="#aef0ff" ' + s(3.5) + '/><circle cx="45" cy="32" r="14" fill="#aef0ff" ' + s(3.5) + '/>' +
-                '<path d="M11 27q4-5 9-4M37 27q4-5 9-4" ' + line('#fff', 3.5) + '/>',
-            trail: '<path d="M4 54C14 52 28 44 38 30" ' + line(k, 12) + '/><path d="M4 54C14 52 28 44 38 30" ' + line('#7fe3dc', 7) + '/><path d="M14 56C22 52 30 48 36 40" ' + line('#fff', 3) + ' opacity=".8"/>' +
-                '<g transform="translate(34 4) scale(1.15)" stroke="' + k + '" stroke-width="2.2" stroke-linejoin="round" color="#ffd23f">' + GD_GLYPHS.spark + '</g>' + gl('spark', 6, 24, .5, '#fff'),
-            victory: '<path d="M32 3l5 12 13-5-5 13 13 4-12 6 9 10-13-2 0 13-8-11-8 11 0-13-13 2 9-10-12-6 13-4-5-13 13 5z" fill="#ffd23f" ' + s(3) + '/><circle cx="32" cy="32" r="8" fill="#ff6f91" ' + s(3) + '/>' +
-                '<circle cx="9" cy="9" r="3" fill="#4fc3f7"/><circle cx="56" cy="8" r="3" fill="#46d977"/><circle cx="7" cy="54" r="3" fill="#ff6f91"/><circle cx="57" cy="55" r="3" fill="#8d5cf0"/>',
-            outfit: '<path d="M22 7L5 15l6 13 8-4v33h26V24l8 4 6-13-17-8c-1 4-5 7-10 7s-9-3-10-7z" fill="#ff6f91" ' + s(3.5) + '/><path d="M22 7c1 4 5 7 10 7s9-3 10-7" ' + line(k, 3) + '/>',
-            rescue: '<circle cx="32" cy="32" r="22" fill="none" stroke="' + k + '" stroke-width="19"/><circle cx="32" cy="32" r="22" fill="none" stroke="#fff" stroke-width="13"/>' +
-                '<circle cx="32" cy="32" r="22" fill="none" stroke="#e5383b" stroke-width="13" stroke-dasharray="17.27 17.27" transform="rotate(-22.5 32 32)"/>' +
-                '<circle cx="32" cy="32" r="15" fill="none" stroke="' + k + '" stroke-width="2.500"/>',
-            ad: '<circle cx="32" cy="32" r="26" fill="#8d5cf0" ' + s(3.5) + '/><path d="M26 20l18 12-18 12z" fill="#fff" ' + s(2.500) + '/>',
-            lock: '<path d="M21 29v-8a11 11 0 0 1 22 0v8" fill="none" ' + s(5.500) + '/><path d="M21 29v-8a11 11 0 0 1 22 0v8" ' + line('#c9d3d8', 2.500) + '/>' +
-                '<rect x="14" y="28" width="36" height="28" rx="7" fill="#ffc233" ' + s(3.500) + '/><circle cx="32" cy="41" r="4" fill="' + k + '"/><path d="M32 43v6" ' + line(k, 3.500) + '/>',
-            check: '<circle cx="32" cy="32" r="26" fill="#3ccf6e" ' + s(3.500) + '/><path d="M19 33l9 9 17-19" ' + line(k, 10) + '/><path d="M19 33l9 9 17-19" ' + line('#fff', 6) + '/>',
-            close: '<path d="M18 18l28 28M46 18L18 46" ' + line(k, 12) + '/><path d="M18 18l28 28M46 18L18 46" ' + line('#fff', 7) + '/>',
-            calm: '<path d="M8 38q24 22 48 0" ' + line(k, 10) + '/><path d="M8 38q24 22 48 0" ' + line('#bff3ee', 5) + '/>' +
-                '<path d="M14 47l-3 6M32 53v7M50 47l3 6" ' + line(k, 4) + '/><path d="M40 10h10l-10 11h10" ' + line(k, 6) + '/><path d="M40 10h10l-10 11h10" ' + line('#fff', 2.500) + '/>',
-            listening: '<path d="M24 56c-6 0-9-4-9-9" ' + line(k, 12) + '/><path d="M24 56c-6 0-9-4-9-9 0-6 5-8 5-14V26c0-9 7-16 16-16s14 6 14 14c0 6-4 9-6 13-1 2-1 4 0 6" ' + line(k, 12) + '/>' +
-                '<path d="M24 56c-6 0-9-4-9-9 0-6 5-8 5-14V26c0-9 7-16 16-16s14 6 14 14c0 6-4 9-6 13-1 2-1 4 0 6" fill="#ffd9ad" stroke="#ffd9ad" stroke-width="6" stroke-linejoin="round"/>' +
-                '<path d="M28 20c5-4 12-1 12 6 0 5-5 6-5 11" ' + line('#e0a27a', 4) + '/><path d="M50 44q5-3 6-9M54 50q8-5 8-14" ' + line('#ffc233', 3.500) + '/>',
-            rushing: '<path d="M10 48C18 44 24 26 34 6c2 14 4 28 20 42z" fill="#37506b" ' + s(3.500) + '/><path d="M30 14c-2 9-5 17-9 24" ' + line('#6d8aa8', 3.500) + '/>' +
-                '<path d="M2 52q7-7 15 0t15 0 15 0 15 0v12H2z" fill="#2fc4cf" ' + s(3.500) + '/>',
-            near: '<path d="M4 32c10-22 46-22 56 0v4c-6 20-50 20-56 0z" fill="#b21f3a" ' + s(3.500) + '/><path d="M12 29l5 10 5-10 5 10 5-10 5 10 5-10 5 10 5-10" fill="#fff" ' + s(2.500) + '/>' +
-                '<ellipse cx="32" cy="45" rx="9" ry="4" fill="#ff6f7f" opacity=".85"/>',
-            arrow: '<path d="M32 3l23 27H41v30H23V30H9z" fill="#ff4d4f" ' + s(4) + '/><path d="M32 12l11 13" ' + line('#fff', 3.500) + ' opacity=".7"/>',
-            throwRange: '<path d="M6 52Q28 -2 56 44" ' + line(k, 8) + '/><path d="M6 52Q28 -2 56 44" fill="none" stroke="#fff" stroke-width="3.500" stroke-linecap="round" stroke-dasharray="1 7"/>' +
-                '<circle cx="10" cy="49" r="6" fill="#c7d0d5" ' + s(3) + '/><ellipse cx="54" cy="50" rx="8" ry="3.500" fill="none" stroke="#2fc4cf" stroke-width="3"/>',
-            skips: '<ellipse cx="13" cy="52" rx="9" ry="3.500" ' + line('#2fc4cf', 3) + '/><ellipse cx="32" cy="46" rx="8" ry="3.200" ' + line('#2fc4cf', 3) + '/><ellipse cx="50" cy="40" rx="7" ry="3" ' + line('#2fc4cf', 3) + '/>' +
-                '<path d="M10 40Q16 20 24 36M28 33Q34 15 42 30M46 27Q50 12 58 22" ' + line(k, 3) + ' stroke-dasharray="1 6"/><circle cx="10" cy="40" r="5" fill="#c7d0d5" ' + s(3) + '/>',
-            toyBattery: '<rect x="6" y="18" width="46" height="28" rx="7" fill="#7ee08a" ' + s(3.500) + '/><rect x="52" y="27" width="7" height="10" rx="2" fill="' + k + '"/>' +
-                '<path d="M32 22l-9 12h8l-3 10 12-14h-8z" fill="#ffd23f" ' + s(2.500) + '/>',
-            flareRadius: '<circle cx="32" cy="32" r="26" fill="none" ' + s(3.500) + ' stroke-dasharray="1 7"/><circle cx="32" cy="32" r="26" fill="none" stroke="#ffae2b" stroke-width="3.500" stroke-dasharray="1 7" stroke-linecap="round"/>' +
-                '<path d="M32 16c5 7 8 10 4 16-2 3-7 3-9 0-3-5 0-8 5-16z" fill="#ffae2b" ' + s(3) + '/><path d="M32 40v14" ' + line(k, 9) + '/><path d="M32 40v14" ' + line('#e5383b', 5) + '/>',
-            ropeReach: '<path d="M6 50h52" ' + line(k, 3) + '/><path d="M6 44v12M58 44v12" ' + line(k, 3) + '/><path d="M12 34q10-18 20-4t20-16" ' + line(k, 9) + '/><path d="M12 34q10-18 20-4t20-16" ' + line('#ead29a', 5) + '/>' +
-                '<circle cx="52" cy="14" r="6" fill="none" ' + s(3.500) + '/>',
-            swimSpeed: '<path d="M2 50q7-7 15 0t15 0 15 0 15 0" ' + line('#2fc4cf', 4) + '/><path d="M2 58q7-7 15 0t15 0 15 0 15 0" ' + line('#7fe3dc', 3.500) + '/>' +
-                '<path d="M14 16l14 14-14 14M32 16l14 14-14 14" ' + line(k, 11) + '/><path d="M14 16l14 14-14 14M32 16l14 14-14 14" ' + line('#ffd23f', 6) + '/>',
-            play: '<path d="M18 10l36 22-36 22z" fill="#fff" ' + s(5) + '/>',
-            lobby: '<path d="M7 31L32 8l25 23v26H7z" fill="#fff4cf" ' + s(3.500) + '/><path d="M3 33L32 5l29 28" ' + line(k, 8) + '/><path d="M3 33L32 5l29 28" ' + line('#e5383b', 4) + '/>' +
-                '<rect x="25" y="37" width="14" height="20" rx="4" fill="#2fc4cf" ' + s(3) + '/><circle cx="35" cy="48" r="1.800" fill="' + k + '"/>',
-            shop: '<rect x="9" y="29" width="46" height="28" rx="4" fill="#f6e7b8" ' + s(3.500) + '/>' +
-                '<path d="M6 30L11 8h42l5 22c-3 6-9 6-13 0-3 6-9 6-13 0-3 6-9 6-13 0-4 6-10 6-13 0z" fill="#e5383b" ' + s(3.500) + '/>' +
-                '<path d="M24 9l-3 21M40 9l3 21" ' + line('#fff', 5) + '/>' + coin(32, 45, 7),
-            equipment: '<path d="M21 22v-6a4 4 0 0 1 4-4h14a4 4 0 0 1 4 4v6" fill="none" ' + s(4) + '/><rect x="6" y="21" width="52" height="36" rx="8" fill="#ff9a3d" ' + s(3.500) + '/>' +
-                '<path d="M6 35h52" ' + line(k, 3.500) + '/><rect x="26" y="31" width="12" height="9" rx="2.500" fill="#ffd23f" ' + s(3) + '/>',
-            upgrades: '<path d="M32 5l22 26H41v26H23V31H10z" fill="#3ccf6e" ' + s(4) + '/><path d="M32 13l11 14" ' + line('#fff', 3.500) + ' opacity=".7"/><path d="M13 58h38" ' + line(k, 4) + '/>',
-            skins: '<path d="M22 7L5 15l6 13 8-4v33h26V24l8 4 6-13-17-8c-1 4-5 7-10 7s-9-3-10-7z" fill="#4fc3f7" ' + s(3.500) + '/><path d="M22 7c1 4 5 7 10 7s9-3 10-7" ' + line(k, 3) + '/>' +
-                '<path d="M19 40h26" ' + line('#fff', 4) + ' opacity=".7"/>',
-            inventory: '<path d="M23 17v-3a9 9 0 0 1 18 0v3" fill="none" ' + s(4) + '/><rect x="12" y="16" width="40" height="44" rx="13" fill="#8d6cf0" ' + s(3.500) + '/>' +
-                '<rect x="21" y="38" width="22" height="15" rx="5" fill="#b9a8ff" ' + s(3) + '/><path d="M32 38v-4" ' + line(k, 3) + '/><path d="M18 27h28" ' + line('#fff', 3) + ' opacity=".5"/>',
-            howto: '<circle cx="32" cy="32" r="26" fill="#ffd23f" ' + s(3.500) + '/><path d="M23 25c0-6 4-9 9-9s9 3 9 8c0 7-9 7-9 15" ' + line(k, 10) + '/><path d="M23 25c0-6 4-9 9-9s9 3 9 8c0 7-9 7-9 15" ' + line('#fff', 5) + '/><circle cx="32" cy="50" r="3.500" fill="' + k + '"/>',
-            sound: '<path d="M8 24h10l14-12v40L18 40H8z" fill="#fff" ' + s(3.500) + '/><path d="M40 22q8 10 0 20M47 15q15 17 0 34" ' + line(k, 8) + '/><path d="M40 22q8 10 0 20M47 15q15 17 0 34" ' + line('#fff', 4) + '/>',
-            mute: '<path d="M8 24h10l14-12v40L18 40H8z" fill="#fff" ' + s(3.500) + '/><path d="M40 24l16 16M56 24L40 40" ' + line(k, 9) + '/><path d="M40 24l16 16M56 24L40 40" ' + line('#ff6f7f', 4.500) + '/>',
-            pause: '<rect x="14" y="10" width="12" height="44" rx="5" fill="#fff" ' + s(4) + '/><rect x="38" y="10" width="12" height="44" rx="5" fill="#fff" ' + s(4) + '/>',
-            gift: '<rect x="8" y="26" width="48" height="32" rx="5" fill="#ff6f91" ' + s(3.500) + '/><rect x="5" y="17" width="54" height="13" rx="4" fill="#ff8fa9" ' + s(3.500) + '/>' +
-                '<path d="M32 17v41" ' + line(k, 11) + '/><path d="M32 17v41" ' + line('#ffd23f', 6) + '/><path d="M32 17c-4-12-17-10-14-3 2 4 9 3 14 3zM32 17c4-12 17-10 14-3-2 4-9 3-14 3z" fill="#ffd23f" ' + s(3) + '/>',
-            x2: '<circle cx="32" cy="32" r="26" fill="#ffd23f" ' + s(3.500) + '/><circle cx="32" cy="32" r="19" fill="none" stroke="#d98f00" stroke-width="2.500"/>' +
-                '<path d="M17 24l12 16M29 24L17 40M36 40q0-7 7-8t7-7q0-5-7-5t-7 6M36 40h14" ' + line(k, 5) + '/>',
-            maxed: '<path d="M32 4l8 17 19 2-14 13 4 19-17-10-17 10 4-19L5 23l19-2z" fill="#ffd23f" ' + s(3.500) + '/><path d="M32 14l4 9" ' + line('#fff', 3.500) + ' opacity=".8"/>' +
-                '<path d="M35 24l-9 13h6l-2 11 10-14h-6z" fill="#fff" ' + s(2.500) + '/>',
-            infinity: '<path d="M32 32c-5-10-10-14-16-14C9 18 5 24 5 32s4 14 11 14c6 0 11-4 16-14s10-14 16-14c7 0 11 6 11 14s-4 14-11 14c-6 0-11-4-16-14z" ' + line(k, 12) + '/>' +
-                '<path d="M32 32c-5-10-10-14-16-14C9 18 5 24 5 32s4 14 11 14c6 0 11-4 16-14s10-14 16-14c7 0 11 6 11 14s-4 14-11 14c-6 0-11-4-16-14z" ' + line('#ead29a', 7) + '/>',
-            star: '<path d="M32 4l8 17 19 2-14 13 4 19-17-10-17 10 4-19L5 23l19-2z" fill="#ffd23f" ' + s(3.500) + '/><path d="M32 14l4 9" ' + line('#fff', 3.500) + ' opacity=".8"/>',
-            clock: '<circle cx="32" cy="34" r="24" fill="#fff" ' + s(3.500) + '/><path d="M32 20v15l10 6" ' + line(k, 5) + '/><path d="M26 6h12" ' + line(k, 5) + '/>',
-            bot: '<rect x="18" y="8" width="28" height="22" rx="8" fill="#ffd9ad" ' + s(3.500) + '/><circle cx="26" cy="19" r="2.600" fill="' + k + '"/><circle cx="38" cy="19" r="2.600" fill="' + k + '"/>' +
-                '<rect x="14" y="33" width="36" height="22" rx="7" fill="#4fc3f7" ' + s(3.500) + '/>',
-            flag: '<path d="M14 6v54" ' + line(k, 5) + '/><path d="M14 8h34l-7 11 7 11H14z" fill="#e5383b" ' + s(3.500) + '/>',
-            monster: '<path d="M4 32c10-22 46-22 56 0v4c-6 20-50 20-56 0z" fill="#b21f3a" ' + s(3.500) + '/><path d="M12 29l5 10 5-10 5 10 5-10 5 10 5-10 5 10 5-10" fill="#fff" ' + s(2.500) + '/>',
+        const T = (d) => '<path d="' + d + '"/>';
+        const C = (x, y, r) => '<circle cx="' + x + '" cy="' + y + '" r="' + r + '"/>';
+        const F = (x, y, r) => '<circle class="f" cx="' + x + '" cy="' + y + '" r="' + r + '"/>';
+        const starPath = 'M32 6l8 17 19 2-14 13 4 19-17-10-17 10 4-19L5 25l19-2z';
+        const tee = 'M22 8L6 16l6 14 8-4v30h24V26l8 4 6-14-16-8c-1 4-5 7-10 7s-9-3-10-7z';
+        const raw = {
+            coin: C(32, 32, 23) + '<circle cx="32" cy="32" r="14" stroke-width="3.5" stroke-dasharray="2 5.4"/>' + T('M26 8.5a6 6 0 0 0 12 0') + T('M28 32h8'),
+            coinpile: '<ellipse cx="32" cy="20" rx="17" ry="7"/>' + T('M15 20v12c0 4 7.5 7 17 7s17-3 17-7V20M15 32v12c0 4 7.5 7 17 7s17-3 17-7V32'),
+            pebble: T('M8 40c0-11 10-19 24-19 15 0 24 8 24 19 0 10-10 15-24 15S8 50 8 40z') + T('M18 38c3-6 8-9 15-9') + T('M6 60q6-4 12 0t12 0 12 0 12 0 4-2'),
+            bottle: T('M26 6h12M28 6v13c0 5-10 7-10 17v16a5 5 0 0 0 5 5h18a5 5 0 0 0 5-5V36c0-10-10-12-10-17V6') + T('M18 38h28M18 49h28'),
+            toy: C(41, 19, 10) + T('M51 18l9 3-9 4') + T('M6 46c0-10 9-15 20-13 4-3 8-4 15-4 0 6 3 9 9 9 0 11-9 19-22 19-13 0-22-3-22-11z') + F(44, 16.5, 2.2) + T('M20 46c4 4 11 4 16 0'),
+            flare: T('M32 4c7 8 10 13 6 19-3 4-9 4-12 0-3-6 1-10 6-19z') + '<rect x="23" y="27" width="18" height="31" rx="3"/>' + T('M23 38h18') + T('M10 14l5 3M54 14l-5 3M6 28h6M52 28h6'),
+            rope: C(27, 38, 17) + C(27, 38, 8) + T('M43 26c6-6 11-11 17-14'),
+            push: T('M3 22h10M1 32h12M3 42h10') + T('M22 30h22a6 6 0 0 1 6 6v8a11 11 0 0 1-11 11H33a11 11 0 0 1-11-11z') + T('M28 30V18M35.5 30V13M43 30V19'),
+            superpush: T('M2 28h9M0 38h11M2 48h9') + T('M20 36h22a6 6 0 0 1 6 6v6a10 10 0 0 1-10 10H30a10 10 0 0 1-10-10z') + T('M26 36V25M33 36V21M41 36V26') + '<path class="f" d="M50 4l2.4 5.5 6 .6-4.5 4 1.4 5.9L50 17l-5.3 3 1.4-5.9-4.5-4 6-.6z"/>',
+            daily: '<rect x="8" y="14" width="48" height="43" rx="5"/>' + T('M8 27h48M20 7v13M44 7v13') + F(32, 42, 4.5),
+            wheel: C(32, 32, 25) + C(32, 32, 5) + T('M32 7v20M32 37v20M7 32h20M37 32h20M14 14l14 14M36 36l14 14M50 14L36 28M28 36L14 50'),
+            records: T('M19 8h26v14a13 13 0 0 1-26 0z') + T('M19 13h-8c0 9 4 13 10 14M45 13h8c0 9-4 13-10 14M32 35v10M24 45h16v9H22M22 54h20'),
+            hair: T('M14 40C10 20 20 8 32 8s22 12 18 32') + T('M14 40c5-4 8-10 8-16 7 4 13 4 20 0 0 6 3 12 8 16') + T('M23 40v9a9 9 0 0 0 18 0v-9') + F(27, 42, 1.8) + F(37, 42, 1.8),
+            hat: T('M10 42c0-15 9-26 22-26s22 11 22 26z') + T('M4 42h56') + F(32, 14, 3.5) + T('M32 17v7'),
+            acc: C(19, 33, 12) + C(45, 33, 12) + T('M31 31h2M2 31h5M57 31h5') + T('M12 29q3-3 7-3'),
+            trail: T('M4 50q8-9 16-3t14-6 14-13') + T('M4 58q8-8 16-3t14-6') + C(46, 16, 6) + C(56, 30, 3.5) + C(34, 10, 3.5),
+            victory: T('M32 5v13M32 46v13M5 32h13M46 32h13M13 13l9 9M42 42l9 9M51 13l-9 9M22 42l-9 9') + C(32, 32, 6),
+            outfit: T(tee),
+            rescue: C(32, 32, 24) + C(32, 32, 10) + T('M15 15l9 9M49 15l-9 9M15 49l9-9M49 49l-9-9'),
+            ad: '<path class="f" d="M22 12l28 20-28 20z"/>',
+            lock: T('M20 28v-8a12 12 0 0 1 24 0v8') + '<rect x="13" y="28" width="38" height="26" rx="4"/>' + F(32, 40, 3.5) + T('M32 42v6'),
+            check: T('M12 34l13 13 27-29'),
+            close: T('M15 15l34 34M49 15L15 49'),
+            calm: T('M5 30q9-9 18 0t18 0 18 0') + T('M5 44q9-9 18 0t18 0 18 0') + C(48, 12, 5),
+            listening: T('M24 56c-6-3-9-8-9-14 0-5 4-8 6-13 2-7 6-14 14-14 9 0 15 6 15 14 0 7-6 10-8 15-1 3-1 6-6 8') + T('M28 28c1-5 5-7 9-5M44 46q6-3 8-9M49 53q10-6 11-17'),
+            rushing: T('M10 46c9-4 15-18 21-38 2 16 8 30 21 38z') + T('M2 54q8-6 15 0t15 0 15 0 15 0'),
+            near: T('M4 32c10-22 46-22 56 0v5c-6 18-50 18-56 0z') + T('M12 33l5 9 5-9 5 9 5-9 5 9 5-9 5 9 5-9') + F(22, 24, 2.5) + F(42, 24, 2.5),
+            arrow: '<path class="f" d="M32 4l24 28H41v28H23V32H8z"/>',
+            throwRange: T('M6 52Q28 -4 56 44') + '<path d="M6 52Q28 -4 56 44" stroke-dasharray="1 8" stroke-width="3"/>' + C(10, 48, 5) + '<ellipse cx="54" cy="52" rx="8" ry="4"/>',
+            skips: '<ellipse cx="13" cy="53" rx="9" ry="3.5"/><ellipse cx="32" cy="47" rx="8" ry="3.2"/><ellipse cx="50" cy="41" rx="7" ry="3"/>' + T('M10 38Q16 18 24 34M28 31Q34 13 42 28M46 25Q50 10 58 20') + C(9, 40, 4),
+            toyBattery: '<rect x="5" y="17" width="46" height="30" rx="5"/>' + T('M51 27h6v10h-6') + '<path class="f" d="M30 21l-9 12h8l-3 11 12-14h-8z"/>',
+            flareRadius: '<circle cx="32" cy="32" r="26" stroke-dasharray="1 8" stroke-width="3.5"/>' + T('M32 16c5 7 8 10 4 16-2 3-7 3-9 0-3-5 0-8 5-16z') + T('M32 40v14'),
+            ropeReach: T('M5 50h54M5 44v12M59 44v12') + T('M8 36q10-18 22-4t26-18') + C(54, 12, 5),
+            swimSpeed: T('M2 52q7-7 15 0t15 0 15 0 15 0') + T('M12 14l14 14-14 14M32 14l14 14-14 14'),
+            play: '<path class="f" d="M18 10l38 22-38 22z"/>',
+            lobby: T('M7 31L32 8l25 23M13 26v31h38V26') + '<rect x="26" y="38" width="12" height="19" rx="2"/>',
+            shop: T('M7 28l4-17h42l4 17c0 5-6 5-6 0 0 5-6 5-6 0 0 5-6 5-6 0s-6 5-6 0c0 5-6 5-6 0s-6 5-6 0c0 5-6 5-6 0z') + T('M11 36v21h42V36') + '<rect x="26" y="42" width="12" height="15"/>',
+            equipment: T('M22 21v-6a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v6') + '<rect x="6" y="21" width="52" height="36" rx="6"/>' + T('M6 36h52') + '<rect x="26" y="32" width="12" height="9" rx="2"/>',
+            upgrades: T('M32 56V12M14 30L32 11l18 19M12 59h40'),
+            skins: T(tee) + T('M20 42h24'),
+            inventory: T('M22 18v-2a10 10 0 0 1 20 0v2') + '<rect x="11" y="17" width="42" height="42" rx="13"/>' + '<rect x="21" y="38" width="22" height="13" rx="4"/>' + T('M32 38v-4'),
+            howto: C(32, 32, 25) + T('M23 26c0-6 4-9 9-9s9 3 9 8c0 7-9 7-9 14') + F(32, 48, 3),
+            sound: T('M7 24h10l15-12v40L17 40H7z') + T('M42 23q7 9 0 18M49 15q14 17 0 34'),
+            mute: T('M7 24h10l15-12v40L17 40H7z') + T('M42 24l15 16M57 24L42 40'),
+            pause: T('M20 12v40M44 12v40'),
+            gift: '<rect x="8" y="28" width="48" height="29" rx="3"/><rect x="5" y="18" width="54" height="10" rx="3"/>' + T('M32 18v39') + T('M32 18c-3-11-16-9-13-2 2 3 8 2 13 2zM32 18c3-11 16-9 13-2-2 3-8 2-13 2z'),
+            x2: T('M8 22l15 18M23 22L8 40') + T('M33 26c0-6 4-10 10-10s10 4 10 9c0 8-20 11-20 25h20'),
+            maxed: T(starPath) + T('M23 31l6 6 12-12'),
+            infinity: T('M32 32c-5-9-10-13-16-13-6 0-10 5-10 13s4 13 10 13c6 0 11-4 16-13s10-13 16-13c6 0 10 5 10 13s-4 13-10 13c-6 0-11-4-16-13z'),
+            star: T(starPath),
+            clock: C(32, 36, 22) + T('M32 22v15l9 6M25 7h14'),
+            bot: '<rect x="16" y="8" width="32" height="24" rx="8"/>' + F(26, 20, 3) + F(38, 20, 3) + '<rect x="14" y="36" width="36" height="22" rx="7"/>',
+            flag: T('M14 6v54') + T('M14 10h34l-8 12 8 12H14'),
+            nosplash: C(32, 32, 26) + T('M13 47q4-3 8 0t8 0 8 0 8 0 6-1') + C(40, 37, 3.6) + T('M37 34L24 18M24 18l-7-8M24 18l-2-8M37 34l7 6M37 34l9-1') + T('M48 24l3-2M44 20l1-4') + '<path class="x" d="M13 13l38 38"/>',
+            monster: '<path class="f" d="M2 30C12 6 52 6 62 30v8c-7 20-53 20-60 0z"/>' + '<path class="k" d="M10 31l6 11 6-11 6 11 6-11 6 11 6-11 6 11 6-11" fill="none"/><circle class="k" cx="22" cy="22" r="4"/><circle class="k" cx="42" cy="22" r="4"/>',
         };
+        /** @type {Record<string, string>} */
+        const out = {};
+        for (const k of Object.keys(raw)) out[k] = '<g fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">' + raw[k] + '</g>';
+        return out;
     })(),
 };
 

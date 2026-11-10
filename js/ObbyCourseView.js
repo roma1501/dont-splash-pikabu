@@ -458,6 +458,7 @@ const ObbyCourseView = {
             add(pad, false);
         }
         for (const cp of C.checkpoints) {
+            if (this.opts.flagStyle === 'pennant') { this._pennantFlag(view, cp, add); continue; }
             const pole = B.CreateBox('cp-pole', { width: 12, height: 230, depth: 12 }, scene);
             pole.material = this.mats['flag-pole'];
             pole.position.set(cp.x, cp.y + 115, cp.z);
@@ -495,10 +496,131 @@ const ObbyCourseView = {
         }
     },
 
-    /** Взятые этапы: флаги чекпоинтов n ≤ stage — зелёные. */
+    /**
+     * Флаг-вымпел (opts.flagStyle 'pennant', Blind Pool Monster): тонкое древко с латунным шариком на кафельной подставке,
+     * полотнище — сетка с «ласточкиным хвостом», колышется (update). Не взят — красно-жёлтый флаг спасателя с номером,
+     * взят — бирюзовый с белой галочкой. Текстуры рисуются на холсте; нет холста — цвет.
+     */
+    _pennantFlag(view, cp, add) {
+        const scene = view.scene, B = BABYLON.MeshBuilder;
+        const mat = (key, hex) => {
+            if (this.mats[key]) return this.mats[key];
+            const m = new BABYLON.StandardMaterial('course-' + key, scene);
+            m.diffuseColor = BABYLON.Color3.FromHexString('#' + hex.toString(16).padStart(6, '0'));
+            m.specularColor = new BABYLON.Color3(0.25, 0.22, 0.15);
+            return (this.mats[key] = m);
+        };
+        const pole = B.CreateCylinder('cp-pole', { diameter: 7, height: 250, tessellation: 10 }, scene);
+        pole.material = mat('flag-brass-pole', 0xe9e4d6);
+        pole.position.set(cp.x, cp.y + 125, cp.z);
+        const knob = B.CreateSphere('cp-knob', { diameter: 18, segments: 8 }, scene);
+        knob.material = mat('flag-brass', 0xc9a227);
+        knob.parent = pole; knob.position.set(0, 128, 0);
+        const base = B.CreateCylinder('cp-base', { diameter: 42, height: 14, tessellation: 16 }, scene);
+        base.material = mat('flag-base', 0x86d3d6);
+        base.parent = pole; base.position.set(0, -118, 0);
+        const cloth = this._pennantMesh(scene);
+        cloth.parent = pole; cloth.position.set(4, 82, 0);
+        // полотнище смотрит поперёк курса чекпоинта: игрок, бегущий по маршруту, видит его сбоку и целиком
+        pole.rotation.y = -(cp.yaw || 0) + Math.PI / 2;
+        const off = this._flagMat(scene, cp.n, false), on = this._flagMat(scene, cp.n, true);
+        cloth.material = off;
+        add(pole);
+        const ring = B.CreateCylinder('cp-ring', { diameter: Math.min(cp.r * 2, 700), height: 3, tessellation: 36 }, scene);
+        ring.material = this.mats['flag-ring'];
+        ring.position.set(cp.x, cp.y + 2, cp.z);
+        add(ring, false);
+        this.flags.push({ n: cp.n, cloth, ring, pole, off, on, ph: cp.n * 1.7, buf: null });
+    },
+
+    /** Сетка полотнища 112×70 px с вырезом у свободного края; позиции покоя — в metadata.base. */
+    _pennantMesh(scene) {
+        const W = 112, H = 70, nx = 14, ny = 4, notch = 24;
+        const pos = [], uv = [], idx = [];
+        for (let j = 0; j <= ny; j++) for (let i = 0; i <= nx; i++) {
+            const u = i / nx, v = j / ny;
+            const cut = u > 0.72 ? (u - 0.72) / 0.28 * notch * (1 - Math.abs(v * 2 - 1)) : 0;
+            pos.push(u * W - cut, (0.5 - v) * H, 0);
+            uv.push(u, 1 - v);
+        }
+        for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+            const a = j * (nx + 1) + i, b = a + 1, c = a + nx + 1, d = c + 1;
+            idx.push(a, c, b, b, c, d);
+        }
+        const m = new BABYLON.Mesh('cp-flag', scene);
+        const vd = new BABYLON.VertexData();
+        const nrm = [];
+        BABYLON.VertexData.ComputeNormals(pos, idx, nrm);
+        vd.positions = pos; vd.indices = idx; vd.uvs = uv; vd.normals = nrm;
+        vd.applyToMesh(m, true);
+        m.metadata = Object.assign({}, m.metadata, { base: pos.slice() });
+        return m;
+    },
+
+    /** Материал полотнища: не взят — красно-жёлтый флаг спасателя с номером, взят — бирюзовый с галочкой. */
+    _flagMat(scene, n, taken) {
+        const key = 'flag-' + (taken ? 'on' : 'off') + '-' + n;
+        if (this.mats[key]) return this.mats[key];
+        const m = new BABYLON.StandardMaterial('course-' + key, scene);
+        m.backFaceCulling = false;
+        m.specularColor = new BABYLON.Color3(0, 0, 0);
+        m.emissiveColor = new BABYLON.Color3(0.18, 0.18, 0.18);   // флаг читается в тумане
+        m.diffuseColor = taken ? new BABYLON.Color3(0.16, 0.62, 0.56) : new BABYLON.Color3(0.84, 0.29, 0.2);
+        try {
+            const t = new BABYLON.DynamicTexture('course-tex-' + key, { width: 256, height: 160 }, scene, true);
+            const ctx = /** @type {CanvasRenderingContext2D} */ (/** @type {any} */ (t.getContext()));
+            if (ctx) {
+                const W = 256, H = 160;
+                if (taken) {
+                    ctx.fillStyle = '#2a9d8f'; ctx.fillRect(0, 0, W, H);
+                    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+                    for (let x = -H; x < W; x += 36) { ctx.beginPath(); ctx.moveTo(x, H); ctx.lineTo(x + 18, H); ctx.lineTo(x + 18 + H, 0); ctx.lineTo(x + H, 0); ctx.fill(); }
+                    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 18; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                    ctx.beginPath(); ctx.moveTo(70, 84); ctx.lineTo(104, 116); ctx.lineTo(166, 44); ctx.stroke();
+                } else {
+                    // флаг спасателя: красный верх, жёлтый низ
+                    ctx.fillStyle = '#d64933'; ctx.fillRect(0, 0, W, H / 2);
+                    ctx.fillStyle = '#f2c14e'; ctx.fillRect(0, H / 2, W, H / 2);
+                    ctx.fillStyle = '#fffaf0'; ctx.beginPath(); ctx.arc(88, H / 2, 46, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = '#1f3a4f'; ctx.lineWidth = 7; ctx.stroke();
+                    ctx.fillStyle = '#1f3a4f'; ctx.font = 'bold 60px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.fillText(String(n), 88, H / 2 + 3);
+                }
+                ctx.strokeStyle = 'rgba(31,58,79,0.55)'; ctx.lineWidth = 6; ctx.strokeRect(3, 3, W - 6, H - 6);
+                t.update(true);
+                m.diffuseTexture = t;
+                m.diffuseColor = new BABYLON.Color3(1, 1, 1);
+            } else t.dispose();
+        } catch (e) { /* без холста — цвет */ }
+        m.metadata = { toon: false };
+        return (this.mats[key] = m);
+    },
+
+    /** Вымпелы колышутся: волна бежит от древка к хвосту (только флаги рядом с игроком). */
+    _waveFlags(t, focus) {
+        for (const f of this.flags) {
+            if (!f.on) continue;
+            const p0 = f.pole.position;
+            if (focus && Math.abs(p0.x - focus.x) + Math.abs(p0.z - focus.z) > 6000) continue;
+            const base = f.cloth.metadata.base;
+            const p = f.buf || (f.buf = new Float32Array(base.length));
+            for (let k = 0; k < base.length; k += 3) {
+                const x = base[k], u = x / 112;
+                p[k] = x;
+                p[k + 1] = base[k + 1] - u * u * 6;
+                p[k + 2] = Math.sin(t * 4.2 + f.ph - x * 0.055) * 11 * u + Math.sin(t * 7.3 + f.ph * 2 - x * 0.12) * 3 * u;
+            }
+            f.cloth.updateVerticesData(BABYLON.VertexBuffer.PositionKind, p);
+        }
+    },
+
+    /** Взятые этапы: флаги чекпоинтов n ≤ stage — зелёные (вымпелы — бирюзовые с галочкой). */
     setStage(stage) {
         this._stage = stage | 0;
-        for (const f of this.flags) f.cloth.material = f.n <= this._stage ? this.mats['flag-on'] : this.mats['flag-off'];
+        for (const f of this.flags) {
+            if (f.on) f.cloth.material = f.n <= this._stage ? f.on : f.off;
+            else f.cloth.material = f.n <= this._stage ? this.mats['flag-on'] : this.mats['flag-off'];
+        }
     },
 
     // ---------------------------------------------------------------------------------------------
@@ -517,6 +639,7 @@ const ObbyCourseView = {
             if (mats.kill.diffuseTexture) { mats.kill.diffuseTexture.uOffset = (t * 0.05) % 1; mats.kill.diffuseTexture.vOffset = (t * 0.03) % 1; }
         }
         if (mats['flag-ring']) mats['flag-ring'].alpha = 0.35 + 0.15 * Math.sin(t * 3);
+        if (this.opts.flagStyle === 'pennant') this._waveFlags(t, focus);
         const R = this.opts.viewDist != null ? this.opts.viewDist : 16000;
         for (const n of this.nodes) {
             const p = n.p;

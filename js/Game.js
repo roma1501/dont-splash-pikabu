@@ -9,6 +9,7 @@
 ObbyCourse.hookMaps();
 
 Object.assign(LANG_STRINGS.ru, {
+    'title': GAME_TITLE,                 // экран загрузки (data-t="title"); у площадок со своим названием (GAME_TITLES) его ставит сборка
     'bpm.jump': 'Прыжок', 'bpm.climb': 'Вылезти', 'bpm.swim': 'Плыви к краю',
     'bpm.fellTip': 'Монстр услышал всплеск! Скорее к краю — Пробел, чтобы вылезти',
     'bpm.fellTipTouch': 'Монстр услышал всплеск! Скорее к краю — жми «Вылезти»',
@@ -28,6 +29,7 @@ Object.assign(LANG_STRINGS.ru, {
     'bpm.tut.cp.t': 'Чекпоинт', 'bpm.tut.cp.h': 'Беги по плиткам к флажку. Упадёшь в воду — вылезай быстрее, чем доплывёт монстр',
 });
 Object.assign(LANG_STRINGS.en, {
+    'title': GAME_TITLE,
     'bpm.jump': 'Jump', 'bpm.climb': 'Climb out', 'bpm.swim': 'Swim to an edge',
     'bpm.fellTip': 'The monster heard the splash! Swim to an edge — Space to climb out',
     'bpm.fellTipTouch': 'The monster heard the splash! Swim to an edge — tap "Climb out"',
@@ -119,7 +121,7 @@ const Game = {
         HudLayout.init({ app });
         Input.init({
             app, mouse: Platform.name === 'playgama' ? 'lock' : 'drag', actions: Object.assign({}, Input.DEFAULTS, {
-                respawn: { keys: ['KeyR'] }, slot1: { keys: ['Digit1', 'Numpad1'] }, slot2: { keys: ['Digit2', 'Numpad2'] },
+                slot1: { keys: ['Digit1', 'Numpad1'] }, slot2: { keys: ['Digit2', 'Numpad2'] },
                 slot3: { keys: ['Digit3', 'Numpad3'] }, push: { keys: ['KeyF'] },
                 // Playables: вся игра одной мышью — ЛКМ как палец (стик и взгляд), ПКМ — прыжок; на остальных ПКМ крутит камеру
                 jump: { keys: Platform.name === 'playables' ? ['Space', 'Mouse2'] : ['Space'], pad: [0] },
@@ -206,7 +208,7 @@ const Game = {
         Input.clearContext('stall');
         ObbyCourse.build(loc.map, {});
         const lobby = loc.map.id === 'lobby';
-        ObbyCourseView.build(app, ObbyCourse, { side: 0xe4d6b6, sideTile: [0xf3e9d2, 0xe2d2b0], startColor: 0x5fc9c4, markers: !lobby });
+        ObbyCourseView.build(app, ObbyCourse, { side: 0xe4d6b6, sideTile: [0xf3e9d2, 0xe2d2b0], startColor: 0x5fc9c4, markers: !lobby, flagStyle: 'pennant' });
         World3D.setOverrides({ shadows: lobby ? 0 : null });   // в лобби потолок закрыл бы солнце и лёг тенью на весь пол
         GamePool.build(app);
         GameProps.build(app);
@@ -254,7 +256,31 @@ const Game = {
         this.buildCoins(loc);
         this.buildRings(loc);
         this.glowLights(loc);
+        this.fitLadders(loc);
         this.runCoins = 0;
+    },
+
+    /**
+     * Лесенка бассейна: начало модели — у кромки, ступени уходят вперёд (+X) вниз в воду. Карта ставит её по расчётной
+     * кромке; тут она доезжает до настоящего края опоры, чтобы ступени висели над водой, а не проходили сквозь плиту.
+     */
+    fitLadders(loc) {
+        for (const rec of loc.objects) {
+            if (!rec.mesh || !/pool_ladder/.test(String(rec.def.model || ''))) continue;
+            const hd = (Array.isArray(rec.def.rot) ? Number(rec.def.rot[1]) || 0 : 0) * Math.PI / 180;
+            const fx = Math.cos(hd), fz = Math.sin(hd), x0 = rec.def.x, z0 = rec.def.y, h0 = Number(rec.def.h) || 260;
+            const solid = (d) => { const g = ObbyCourse.groundAt(x0 + fx * d, z0 + fz * d, h0 + 80, 120); return g != null && g > h0 - 30 ? g : null; };
+            // от точки карты назад до опоры и вперёд до её края (шаг 5 px)
+            let d = 0;
+            while (d > -300 && solid(d) == null) d -= 5;
+            if (solid(d) == null) continue;
+            while (d < 400 && solid(d + 5) != null) d += 5;
+            if (d >= 400) continue;                 // край так и не нашёлся — оставить, как поставила карта
+            const top = solid(d);
+            rec.mesh.position.x = x0 + fx * (d + 4);
+            rec.mesh.position.z = z0 + fz * (d + 4);
+            rec.mesh.position.y = top;
+        }
     },
 
     /** Потолочные лампы светятся сами (низ панели смотрит от солнца — без этого тёмный). */
@@ -633,7 +659,6 @@ const Game = {
         const fx = Math.cos(cam.azimuth), fz = Math.sin(cam.azimuth);
         const dx = fx * m.y - fz * m.x, dz = fz * m.y + fx * m.x;
         const jumped = Input.pressed('jump');
-        if (Input.pressed('respawn') && this.state === 'run' && !h.swimming && !h.grabbed) { this.placeHero(); return; }
         if (this.state === 'run') {
             if (Input.pressed('slot1')) this.useSlot(0);
             if (Input.pressed('slot2')) this.useSlot(1);
@@ -700,6 +725,15 @@ const Game = {
         this.save.stage = ns; this.save.map = 'pool-' + this.level;
         this.persist();
         GameUI.toast(Lang.t('bpm.checkpoint', { n: ns }));
+        const cp = ObbyCourse.checkpoints.find(c => c.n === ns);
+        const fx = /** @type {LoryApp} */ (this.app).fx;
+        if (cp && fx) {
+            try {
+                fx.create({ burst: 46, capacity: 50, life: [0.8, 1.6], size: [6, 13], speed: [260, 520], color: '#d64933', color2: '#f2c14e',
+                    position: new BABYLON.Vector3(cp.x, cp.y + 240, cp.z), direction: [[-0.6, 1, -0.6], [0.6, 1.4, 0.6]], gravity: [0, -900, 0], blend: 'standard',
+                    spin: [-6, 6], colorGradient: [[0, '#ffffff', 1], [0.2, '#2a9d8f', 1], [1, '#f2c14e', 0]] });
+            } catch (e) { /* без эффекта */ }
+        }
         this.sfx('checkpoint');
         Tutorial.complete('checkpoint');
         if (typeof Telemetry !== 'undefined') Telemetry.progress('completed', 'pool_' + this.level + '_cp' + ns, { step_index: ns });

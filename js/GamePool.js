@@ -239,15 +239,36 @@ const GamePool = {
         const si = Math.floor((s.x - N.x0) / N.cell), sj = Math.floor((s.z - N.z0) / N.cell);
         const gi = Math.floor((g.x - N.x0) / N.cell), gj = Math.floor((g.z - N.z0) / N.cell);
         const G = new Float32Array(W * H).fill(Infinity), from = new Int32Array(W * H).fill(-1), closed = new Uint8Array(W * H);
-        const open = [idx(si, sj)];
-        G[open[0]] = 0;
         const hh = (k) => { const i = k % W, j = (k / W) | 0; return Math.hypot(i - gi, j - gj); };
         const goal = idx(gi, gj);
+        // открытый список — двоичная куча по f = G + h (на огромных картах перебор массива стоил десятки мс)
+        /** @type {number[]} */ const heap = [], hf = [];
+        const push = (k, f) => {
+            let i = heap.length; heap.push(k); hf.push(f);
+            while (i > 0) { const p = (i - 1) >> 1; if (hf[p] <= f) break; heap[i] = heap[p]; hf[i] = hf[p]; i = p; }
+            heap[i] = k; hf[i] = f;
+        };
+        const pop = () => {
+            const top = heap[0], lk = heap.pop(), lf = hf.pop();
+            if (heap.length) {
+                let i = 0;
+                for (;;) {
+                    const l = 2 * i + 1, r = l + 1;
+                    let m = i, mf = lf;
+                    if (l < heap.length && hf[l] < mf) { m = l; mf = hf[l]; }
+                    if (r < heap.length && hf[r] < mf) { m = r; mf = hf[r]; }
+                    if (m === i) break;
+                    heap[i] = heap[m]; hf[i] = hf[m]; i = m;
+                }
+                heap[i] = lk; hf[i] = lf;
+            }
+            return top;
+        };
+        G[idx(si, sj)] = 0;
+        push(idx(si, sj), hh(idx(si, sj)));
         let guard = 0;
-        while (open.length && guard++ < 60000) {
-            let bi = 0, bf = Infinity;
-            for (let n = 0; n < open.length; n++) { const f = G[open[n]] + hh(open[n]); if (f < bf) { bf = f; bi = n; } }
-            const cur = open[bi]; open[bi] = open[open.length - 1]; open.pop();
+        while (heap.length && guard++ < 120000) {
+            const cur = pop();
             if (cur === goal) break;
             if (closed[cur]) continue;
             closed[cur] = 1;
@@ -260,7 +281,7 @@ const GamePool = {
                 if (N.cells[nk] !== 1 || closed[nk]) continue;
                 if (di && dj && (N.cells[idx(ci + di, cj)] !== 1 || N.cells[idx(ci, cj + dj)] !== 1)) continue;
                 const ng = G[cur] + (di && dj ? 1.414 : 1);
-                if (ng < G[nk]) { G[nk] = ng; from[nk] = cur; open.push(nk); }
+                if (ng < G[nk]) { G[nk] = ng; from[nk] = cur; push(nk, ng + hh(nk)); }
             }
         }
         if (from[goal] < 0 && goal !== idx(si, sj)) return null;

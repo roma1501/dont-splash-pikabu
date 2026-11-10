@@ -452,7 +452,7 @@ const Platform = {
             el.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;' +
                 'background:rgba(0,0,0,.85);color:#fff;font:bold 22px system-ui,sans-serif;text-align:center';
             // Blind Pool Monster: ролик заглушки длится MOCK_AD_SEC (16 с) с обратным отсчётом — как настоящая реклама игры
-            const sec = typeof MOCK_AD_SEC !== 'undefined' ? MOCK_AD_SEC : 1;
+            const sec = reward && typeof MOCK_AD_SEC !== 'undefined' ? MOCK_AD_SEC : 1;   // межстраничная — без отсчёта
             const label = (reward ? 'REWARDED' : 'INTERSTITIAL') + ' — local mock';
             let left = sec;
             el.textContent = sec > 1 ? label + ' · ' + left + ' s' : label;
